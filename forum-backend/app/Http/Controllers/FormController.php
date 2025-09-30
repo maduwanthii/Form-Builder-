@@ -15,14 +15,14 @@ class FormController extends Controller
 
     public function store(Request $request)
     {
-        // Validate input
+        
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'fields' => 'nullable|array', // Optional, must be array if provided
+            'fields' => 'nullable|array', 
         ]);
 
-        // Store the form
+       
         $form = Form::create([
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,

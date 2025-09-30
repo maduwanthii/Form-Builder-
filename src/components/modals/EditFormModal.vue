@@ -16,7 +16,7 @@ const isOpen = computed({
   set: (v: boolean) => emit('update:modelValue', v),
 });
 
-// ✅ Declare before using it
+
 const localForm = ref<{ title: string; description: string; fields: any[] }>({
   title: '',
   description: '',
@@ -28,9 +28,11 @@ watch(
   (val) => {
     const safe = val || { title: '', description: '', fields: [] };
     localForm.value = JSON.parse(JSON.stringify(safe));
+    console.log(localForm.value);  // Log the local form values to see if description is set
   },
   { immediate: true }
 );
+
 
 const genId = () => Date.now() + Math.random();
 
@@ -101,18 +103,7 @@ const save = () => {
               </div>
             </div>
 
-            <label class="label">Label</label>
-            <input
-              class="input"
-              v-model="f.label"
-              :placeholder="f.type === 'text'
-                ? 'Text Field'
-                : f.type === 'textarea'
-                ? 'Textarea Field'
-                : f.type === 'checkbox'
-                ? 'Checkbox Field'
-                : 'Radio Field'"
-            />
+            
 
             <template v-if="f.type === 'checkbox' || f.type === 'radio'">
               <div class="hr"></div>

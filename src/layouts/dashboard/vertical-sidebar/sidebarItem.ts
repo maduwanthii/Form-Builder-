@@ -8,7 +8,10 @@ import {
   FontSizeOutlined,
   BgColorsOutlined,
   BarcodeOutlined,
-  CrownOutlined
+  CrownOutlined,
+  PlusOutlined,
+  FileOutlined,
+  BarChartOutlined
 } from '@ant-design/icons-vue';
 
 export interface menu {
@@ -48,17 +51,17 @@ const sidebarItem: menu[] = [
   { header: 'Utilities' },
   {
     title: 'Forms',
-    icon: FontSizeOutlined,
+    icon: FileOutlined,
     to: '/typography'
   },
   {
     title: 'Form Builder',
-    icon: BgColorsOutlined,
+    icon: PlusOutlined,
     to: '/colors'
   },
   {
     title: 'Submissions',
-    icon: BarcodeOutlined,
+    icon: BarChartOutlined,
     to: '/shadow'
   },
   {

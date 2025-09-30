@@ -1,23 +1,46 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 
-// Dummy submissions
+const exportCSV = () => {
+  const headers = ['ID', 'Full Name', 'Email', 'Message', 'IP Address', 'Submitted'];
+  
+  const rows = submissions.value.map(sub => [
+    sub.id,
+    `"${sub.fullName}"`,
+    `"${sub.email}"`,
+    `"${sub.message}"`,
+    sub.ip,
+    sub.submitted,
+  ]);
+
+  const csvContent =
+    [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.setAttribute('download', 'submissions.csv');
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
 const submissions = ref([
   {
     id: 1,
-    fullName: 'John Doe',
-    email: 'john.doe@email.com',
+    fullName: 'Maduwanthi Lakshika',
+    email: 'madu@email.com',
     message: 'I would like to know more about your services.',
     ip: '192.168.1.100',
-    submitted: '2024-01-22 20:00:00',
+    submitted: '2024-09-30 20:00:00',
   },
   {
     id: 2,
-    fullName: 'Jane Smith',
-    email: 'jane.smith@email.com',
+    fullName: 'Lakshika Rathnayaka',
+    email: 'lakshiik@email.com',
     message: 'Please send me your price list.',
     ip: '192.168.1.120',
-    submitted: '2024-01-22 21:30:00',
+    submitted: '2024-09-29 21:30:00',
   },
 ]);
 
@@ -34,7 +57,8 @@ const selectSubmission = (s: any) => {
     <!-- Header -->
     <div class="header">
       <h2>Form Submissions</h2>
-      <v-btn color="success" prepend-icon="mdi-tray-arrow-down">Export CSV</v-btn>
+     <v-btn color="success" prepend-icon="mdi-tray-arrow-down" @click="exportCSV">Export CSV</v-btn>
+
     </div>
 
     <div class="content">
