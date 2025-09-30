@@ -1,45 +1,47 @@
-# Mantis Free Vue Material Admin Template
+## 📝 Form Builder
 
-- [Demo](https://themewagon.github.io/Mantis-Vue/)
+## 🚀 Project Overview
 
-#### Download
+A full-stack Form Builder web app built with **Vue.js** (frontend) and **Laravel (PHP)** (backend).  
+Users can create, view, update, and delete forms with a MySQL database connected.
 
-- [Download from ThemeWagon](https://themewagon.com/themes/Mantis-Vue/)
+## 📋 Prerequisites
 
-## Getting Started
+- Node.js v16 or newer  
+- npm, yarn, or pnpm package manager  
+- PHP 8.x or newer  
+- Composer  
+- MySQL database  
 
-1. Clone Repository
+## 🎥 Project Demo / Video
 
-```
-git clone https://github.com/themewagon/Mantis-Vue.git
-```
+Screen recording link:  
+[Form Builder Demo Video]([https://your-video-link.com](https://drive.google.com/file/d/1g1pCUWQXkeJGQHZj7rcDy7Cw2cQtq63E/view)) 
 
-2. Install Dependencies
+## ⚙️ Setup & Run
 
-```
-npm i
-```
-
-3. Run the development server:
+## Clone the repository
 
 ```bash
-npm run start
-# or
-yarn start
-# or
-pnpm start
-# or
-bun start
-```
+git clone https://github.com/maduwanthii/Form-Builder-.git
+cd Form-Builder-
 
-## Author
+npm install  
+npm run dev
 
-```
-Mantis is developed by Team CodedThemes.
-```
 
-## License
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate
+php artisan serve
 
-- Design and Code is Copyright &copy; [CodedThemes](https://codedthemes.com).
-- Licensed cover under [MIT]
-- Distributed by [ThemeWagon](https://themewagon.com)
+
+## 🔗 API Endpoints
+
+Method	Endpoint	Description
+POST	/api/forms	Create a new form
+GET	/api/forms	Get all forms
+GET	/api/forms/{id}	Get a specific form
+PUT	/api/forms/{id}	Update a form
+DELETE	/api/forms/{id}	Delete a form
