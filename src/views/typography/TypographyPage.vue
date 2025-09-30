@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted, nextTick } from 'vue';
 import BaseBreadcrumb from '@/components/shared/BaseBreadcrumb.vue';
 import UiParentCard from '@/components/shared/UiParentCard.vue';
 import '@mdi/font/css/materialdesignicons.css';
 import EditFormModal from '@/components/modals/EditFormModal.vue';
 import PreviewFormModal from '@/components/modals/PreviewFormModal.vue';
 import axios from 'axios';
+import Swal from 'sweetalert2';
+
 
 import {
   EditOutlined,
@@ -17,15 +19,42 @@ import {
 const page = ref({ title: 'Forms' });
 const breadcrumbs = ref([{ title: 'Forms', disabled: true, href: '#' }]);
 
-const forms = ref([
-  {
-    title: 'Contact Form',
-    fields: [
-      { id: 1, type: 'text', label: 'Name', required: true, options: [] },
-      { id: 2, type: 'text', label: 'Email', required: true, options: [] }
-    ]
+const forms = ref<any[]>([]);
+const loading = ref(true);
+
+const fetchForms = async () => {
+  try {
+    loading.value = true;
+    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/forms`);
+
+
+    console.log('API Response:', response.data);
+
+    // Support both wrapped and unwrapped API responses
+    const apiForms = Array.isArray(response.data)
+      ? response.data
+      : response.data.data;
+
+    if (!Array.isArray(apiForms)) {
+      throw new Error('API did not return an array.');
+    }
+
+    forms.value = apiForms.map((form: any) => ({
+      title: form.name,
+      description: form.description,
+      fields: form.fields || [],
+    }));
+  } catch (error: any) {
+    console.error('Error fetching forms:', error.response?.data || error.message);
+    alert('Failed to load forms. Check console for details.');
+  } finally {
+    loading.value = false;
   }
-]);
+};
+
+onMounted(() => {
+  fetchForms();
+});
 
 const previewCount = (form: any) => form.fields?.length ?? 0;
 
@@ -51,43 +80,73 @@ const cancel = () => {
 const generateFieldName = (label: string) =>
   label.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^\w_]/g, '');
 
+const saving = ref(false);
 const saveForm = async () => {
   if (!newForm.value.title.trim()) {
-    alert('Form title is required!');
+    await Swal.fire({
+      icon: 'warning',
+      title: 'Missing Title',
+      text: 'Form title is required!',
+    });
     return;
   }
 
   if (!newForm.value.description.trim()) {
-    alert('Form description is required!');
+    await Swal.fire({
+      icon: 'warning',
+      title: 'Missing Description',
+      text: 'Form description is required!',
+    });
     return;
   }
 
   try {
+    saving.value = true;
+
     const payload = {
       name: newForm.value.title.trim(),
       description: newForm.value.description.trim(),
       fields: newForm.value.fields.map((field) => ({
         label: field.label.trim(),
-        type: field.type === 'text' && field.label.toLowerCase().includes('email') ? 'email' : field.type,
+        type:
+          field.type === 'text' && field.label.toLowerCase().includes('email')
+            ? 'email'
+            : field.type,
         name: generateFieldName(field.label),
-        required: field.required
-      }))
+        required: field.required,
+      })),
     };
 
-    await axios.post('http://127.0.0.1:8000/api/forms', payload);
-
-    forms.value.push({
-      title: newForm.value.title,
-      fields: JSON.parse(JSON.stringify(newForm.value.fields))
+    await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/forms`, payload);
+    showModal.value = false;
+    // Show SweetAlert and wait for user to confirm
+    await Swal.fire({
+      icon: 'success',
+      title: 'Form Saved!',
+      text: 'Your form has been successfully created.',
+      confirmButtonText: 'OK',
+      // Optionally add:
+      // allowOutsideClick: false,
+      // allowEscapeKey: false,
     });
 
-    alert('Form saved!');
-    showModal.value = false;
+    // Wait for Vue to finish any pending DOM updates
+    await nextTick();
 
+    // Now close the modal and reset form
+   
     newForm.value = { title: '', description: '', fields: [] };
+
+    await fetchForms();
   } catch (error: any) {
     console.error('Error saving form:', error.response?.data || error.message);
-    alert('Error saving form. Check console for details.');
+    await Swal.fire({
+      icon: 'error',
+      title: 'Save Failed',
+      text: 'Error saving form. Check console for details.',
+    });
+  } finally {
+    saving.value = false;
   }
 };
 
@@ -117,7 +176,7 @@ const move = (i: number, direction: number) => {
 const addOption = (field: any) => field.options.push('');
 const removeOption = (field: any, index: number) => field.options.splice(index, 1);
 
-// ==== Edit Modal Logic ====
+
 const showEditModal = ref(false);
 const editIndex = ref<number | null>(null);
 const editFormData = ref<{ title: string; fields: any[] }>({ title: '', fields: [] });
@@ -163,7 +222,7 @@ const openPreview = (idx: number) => {
     </v-btn>
   </div>
 
-  <v-row>
+  <v-row v-if="!loading">
     <v-col v-for="(form, i) in forms" :key="i" cols="12" md="4">
       <UiParentCard :title="form.title" class="small-card">
         <div class="d-flex align-center mt-1 card-actions">
@@ -189,6 +248,10 @@ const openPreview = (idx: number) => {
       </UiParentCard>
     </v-col>
   </v-row>
+
+  <div v-else>
+    <p>Loading forms...</p>
+  </div>
 
   <!-- Create Form Modal -->
   <v-dialog v-model="showModal" width="600">
@@ -247,12 +310,13 @@ const openPreview = (idx: number) => {
       </v-card-text>
       <v-card-actions class="justify-end">
         <v-btn text @click="cancel">Cancel</v-btn>
-        <v-btn color="primary" @click="saveForm">Save Form</v-btn>
+        <v-btn color="primary" @click="saveForm" :disabled="saving">
+  {{ saving ? 'Saving...' : 'Save Form' }}
+</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
 
-  <!-- Edit Modal Component -->
   <EditFormModal v-model="showEditModal" :formData="editFormData" @save="saveEdit" />
 
   <!-- Preview Modal Component -->
