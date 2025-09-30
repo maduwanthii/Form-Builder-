@@ -5,6 +5,7 @@ import UiParentCard from '@/components/shared/UiParentCard.vue';
 import '@mdi/font/css/materialdesignicons.css';
 import EditFormModal from '@/components/modals/EditFormModal.vue';
 import PreviewFormModal from '@/components/modals/PreviewFormModal.vue';
+import axios from 'axios';
 
 import {
   EditOutlined,
@@ -16,7 +17,6 @@ import {
 const page = ref({ title: 'Forms' });
 const breadcrumbs = ref([{ title: 'Forms', disabled: true, href: '#' }]);
 
-// ===== forms dummy data =====
 const forms = ref([
   {
     title: 'Contact Form',
@@ -24,38 +24,23 @@ const forms = ref([
       { id: 1, type: 'text', label: 'Name', required: true, options: [] },
       { id: 2, type: 'text', label: 'Email', required: true, options: [] }
     ]
-  },
-  {
-    title: 'Event Registration',
-    fields: [
-      { id: 3, type: 'text', label: 'Full Name', required: true, options: [] },
-      { id: 4, type: 'radio', label: 'Ticket Type', required: true, options: ['Regular', 'VIP'] }
-    ]
-  },
-  {
-    title: 'Product Feedback',
-    fields: [
-      { id: 5, type: 'text', label: 'Product Name', required: true, options: [] },
-      { id: 6, type: 'textarea', label: 'Comments', required: false, options: [] }
-    ]
   }
 ]);
 
-// === helpers ===
-const previewCount = (form:any) => form.fields?.length ?? 0;
+const previewCount = (form: any) => form.fields?.length ?? 0;
 
-// ==== Create Modal Logic ====
 const showModal = ref(false);
 
 const newForm = ref({
   title: '',
+  description: '',
   fields: [] as any[]
 });
 
 const genId = () => Date.now() + Math.random();
 
 const openModal = () => {
-  newForm.value = { title: '', fields: [] };
+  newForm.value = { title: '', description: '', fields: [] };
   showModal.value = true;
 };
 
@@ -63,13 +48,47 @@ const cancel = () => {
   showModal.value = false;
 };
 
-const saveForm = () => {
-  if (!newForm.value.title.trim()) return;
-  forms.value.push({
-    title: newForm.value.title,
-    fields: JSON.parse(JSON.stringify(newForm.value.fields))
-  });
-  showModal.value = false;
+const generateFieldName = (label: string) =>
+  label.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^\w_]/g, '');
+
+const saveForm = async () => {
+  if (!newForm.value.title.trim()) {
+    alert('Form title is required!');
+    return;
+  }
+
+  if (!newForm.value.description.trim()) {
+    alert('Form description is required!');
+    return;
+  }
+
+  try {
+    const payload = {
+      name: newForm.value.title.trim(),
+      description: newForm.value.description.trim(),
+      fields: newForm.value.fields.map((field) => ({
+        label: field.label.trim(),
+        type: field.type === 'text' && field.label.toLowerCase().includes('email') ? 'email' : field.type,
+        name: generateFieldName(field.label),
+        required: field.required
+      }))
+    };
+
+    await axios.post('http://127.0.0.1:8000/api/forms', payload);
+
+    forms.value.push({
+      title: newForm.value.title,
+      fields: JSON.parse(JSON.stringify(newForm.value.fields))
+    });
+
+    alert('Form saved!');
+    showModal.value = false;
+
+    newForm.value = { title: '', description: '', fields: [] };
+  } catch (error: any) {
+    console.error('Error saving form:', error.response?.data || error.message);
+    alert('Error saving form. Check console for details.');
+  }
 };
 
 const addField = (type: string) => {
@@ -119,7 +138,6 @@ const saveEdit = (updated: any) => {
   }
 };
 
-
 const showPreviewModal = ref(false);
 const previewFormData = ref<{ title: string; fields: any[] }>({ title: '', fields: [] });
 
@@ -127,12 +145,10 @@ const openPreview = (idx: number) => {
   const src: any = forms.value[idx] || {};
   previewFormData.value = {
     title: src.title || 'Untitled Form',
-    // deep clone to avoid accidental edits during preview
     fields: JSON.parse(JSON.stringify(Array.isArray(src.fields) ? src.fields : [])),
   };
   showPreviewModal.value = true;
 };
-
 </script>
 
 <template>
@@ -151,27 +167,15 @@ const openPreview = (idx: number) => {
     <v-col v-for="(form, i) in forms" :key="i" cols="12" md="4">
       <UiParentCard :title="form.title" class="small-card">
         <div class="d-flex align-center mt-1 card-actions">
-          <v-btn
-            variant="tonal"
-            size="small"
-            color="primary"
-            class="small-btn"
-            @click="openEdit(i)"
-          >
+          <v-btn variant="tonal" size="small" color="primary" class="small-btn" @click="openEdit(i)">
             <template #prepend><EditOutlined /></template>
             Edit
           </v-btn>
 
-        <v-btn
-  variant="tonal"
-  size="small"
-  color="#020503ff"
-  class="small-btn"
-  @click="openPreview(i)"
->
-  <template #prepend><EyeOutlined /></template>
-  Preview
-</v-btn>
+          <v-btn variant="tonal" size="small" color="#020503ff" class="small-btn" @click="openPreview(i)">
+            <template #prepend><EyeOutlined /></template>
+            Preview
+          </v-btn>
 
           <v-btn variant="tonal" size="small" color="#9b7714ff" class="small-btn">
             {{ previewCount(form) }}
@@ -194,12 +198,16 @@ const openPreview = (idx: number) => {
         <label class="label">Form Title</label>
         <input class="input" v-model="newForm.title" placeholder="Enter form title" />
 
+        <label class="label">Form Description</label>
+        <input class="input" v-model="newForm.description" placeholder="Enter form description" />
+
         <div class="toolbar" style="margin: 10px 0">
           <span class="small">Add Fields:</span>
           <button class="btn" @click="addField('text')">+ Text Input</button>
           <button class="btn" @click="addField('textarea')">+ Text Area</button>
           <button class="btn" @click="addField('checkbox')">+ Checkbox</button>
           <button class="btn" @click="addField('radio')">+ Radio</button>
+          <button class="btn" @click="addField('email')">+ Email</button>
         </div>
 
         <div v-if="newForm.fields.length === 0" class="empty">No fields yet. Add one above.</div>
@@ -221,17 +229,7 @@ const openPreview = (idx: number) => {
             </div>
 
             <label class="label">Label</label>
-            <input
-              class="input"
-              v-model="f.label"
-              :placeholder="f.type === 'text'
-                ? 'Text Field'
-                : f.type === 'textarea'
-                ? 'Textarea Field'
-                : f.type === 'checkbox'
-                ? 'Checkbox Field'
-                : 'Radio Field'"
-            />
+            <input class="input" v-model="f.label" placeholder="Enter field label" />
 
             <template v-if="f.type === 'checkbox' || f.type === 'radio'">
               <div class="hr"></div>
@@ -255,16 +253,10 @@ const openPreview = (idx: number) => {
   </v-dialog>
 
   <!-- Edit Modal Component -->
-  <EditFormModal
-    v-model="showEditModal"
-    :formData="editFormData"
-    @save="saveEdit"
-  />
+  <EditFormModal v-model="showEditModal" :formData="editFormData" @save="saveEdit" />
 
-  <PreviewFormModal
-  v-model="showPreviewModal"
-  :formData="previewFormData"
-/>
+  <!-- Preview Modal Component -->
+  <PreviewFormModal v-model="showPreviewModal" :formData="previewFormData" />
 </template>
 
 <style scoped>
@@ -325,27 +317,23 @@ const openPreview = (idx: number) => {
   font-style: italic;
   margin-bottom: 12px;
 }
-
 .card-actions {
   display: flex;
-  flex-wrap: wrap; /* allow wrapping */
-  gap: 12px; /* reduce gap for better responsiveness */
+  flex-wrap: wrap;
+  gap: 12px;
   justify-content: flex-start;
 }
-
 @media (min-width: 1024px) {
   .card-actions {
-    justify-content: space-between; /* spread buttons on desktop */
+    justify-content: space-between;
     gap: 20px;
   }
 }
-
 .small-btn {
   min-height: 32px !important;
   font-size: 13px !important;
   padding: 4px 14px !important;
-  flex: 1 1 auto; /* allow buttons to resize */
-  max-width: 150px; /* prevent oversized buttons */
+  flex: 1 1 auto;
+  max-width: 150px;
 }
-
 </style>
