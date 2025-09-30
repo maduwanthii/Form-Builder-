@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { reactive, ref, nextTick } from 'vue'
+import Swal from 'sweetalert2'
+import axios from 'axios'
 
 type FieldType = 'text' | 'textarea' | 'checkbox' | 'radio'
+
 type Field = {
   id: string
   type: FieldType
@@ -10,10 +13,13 @@ type Field = {
   options: string[]
 }
 
-const newForm = reactive<{ title: string; fields: Field[] }>({
+const newForm = reactive<{ title: string; description: string; fields: Field[] }>({
   title: '',
+  description: '',
   fields: []
 })
+
+const saving = ref(false)
 
 function uid() {
   return `f_${Math.random().toString(36).slice(2, 10)}_${Date.now().toString(36)}`
@@ -73,32 +79,78 @@ function removeOption(field: Field, oi: number) {
   if (field.options.length === 0) field.options.push('Option 1')
 }
 
-function resetForm() {
-  newForm.title = ''
-  newForm.fields = []
+function generateFieldName(label: string): string {
+  return label.toLowerCase().replace(/\s+/g, '_').replace(/[^\w_]/g, '')
 }
 
-function saveForm() {
-  const payload = {
-    title: (newForm.title || '').trim(),
-    fields: newForm.fields.map((f) => ({
-      id: f.id,
-      type: f.type,
-      label: (f.label || '').trim(),
-      required: !!f.required,
-      options:
-        f.type === 'checkbox' || f.type === 'radio'
-          ? f.options.map((o) => String(o || '').trim()).filter(Boolean)
-          : []
-    }))
+const saveForm = async () => {
+  if (!newForm.title.trim()) {
+    await Swal.fire({
+      icon: 'warning',
+      title: 'Missing Title',
+      text: 'Form title is required!',
+    })
+    return
   }
 
-  // Replace with your API call
-  console.log('Saved form:', payload)
+  if (!newForm.description.trim()) {
+    await Swal.fire({
+      icon: 'warning',
+      title: 'Missing Description',
+      text: 'Form description is required!',
+    })
+    return
+  }
 
-  resetForm()
+  try {
+    saving.value = true
+
+    const payload = {
+      name: newForm.title.trim(),
+      description: newForm.description.trim(),
+      fields: newForm.fields.map((field) => ({
+        label: field.label.trim(),
+        type:
+          field.type === 'text' && field.label.toLowerCase().includes('email')
+            ? 'email'
+            : field.type,
+        name: generateFieldName(field.label),
+        required: field.required,
+        options:
+          field.type === 'checkbox' || field.type === 'radio'
+            ? field.options.map((o) => o.trim()).filter(Boolean)
+            : [],
+      })),
+    }
+
+    await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/forms`, payload)
+
+    await Swal.fire({
+      icon: 'success',
+      title: 'Form Saved!',
+      text: 'Your form has been successfully created.',
+    })
+
+    await nextTick()
+
+    newForm.title = ''
+    newForm.description = ''
+    newForm.fields = []
+
+    // Optional: await fetchForms()
+  } catch (error: any) {
+    console.error('Error saving form:', error.response?.data || error.message)
+    await Swal.fire({
+      icon: 'error',
+      title: 'Save Failed',
+      text: 'Error saving form. Check console for details.',
+    })
+  } finally {
+    saving.value = false
+  }
 }
 </script>
+
 
 <template>
   <v-container>
@@ -108,6 +160,9 @@ function saveForm() {
       <v-card-text>
         <label class="label">Form Title</label>
         <input class="input" v-model="newForm.title" placeholder="Enter form title" />
+
+        <label class="label">Form Description</label>
+        <input class="input" v-model="newForm.description" placeholder="Enter form description" />
 
         <div class="toolbar" style="margin: 10px 0">
           <span class="small">Add Fields:</span>
@@ -172,25 +227,14 @@ function saveForm() {
       </v-card-text>
 
       <v-card-actions class="justify-end card-actions">
-        <v-btn color="primary" @click="saveForm">Save Form</v-btn>
+        <v-btn color="primary" @click="saveForm" :disabled="saving">
+          {{ saving ? 'Saving...' : 'Save Form' }}
+        </v-btn>
       </v-card-actions>
     </v-card>
   </v-container>
 </template>
-
 <style scoped>
-.small-card {
-  padding: 12px !important;
-  font-size: 14px;
-}
-.small-btn {
-  min-height: 28px !important;
-  font-size: 13px !important;
-  padding: 0 10px !important;
-}
-.card-actions {
-  gap: 25px;
-}
 .label {
   font-weight: bold;
   display: block;
@@ -260,4 +304,8 @@ function saveForm() {
   margin-right: 8px;
   color: #666;
 }
+.card-actions {
+  gap: 25px;
+}
 </style>
+

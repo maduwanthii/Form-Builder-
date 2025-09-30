@@ -34,6 +34,31 @@ class FormController extends Controller
             'data' => $form,
         ], 201);
     }
+
+     public function show($id)
+    {
+        $form = Form::find($id);
+
+        if (!$form) {
+            return response()->json(['message' => 'Form not found'], 404);
+        }
+
+        return response()->json(['data' => $form], 200);
+    }
+
+    public function destroy($id)
+{
+    $form = Form::find($id);
+
+    if (!$form) {
+        return response()->json(['message' => 'Form not found'], 404);
+    }
+
+    $form->delete();
+
+    return response()->json(['message' => 'Form deleted successfully'], 200);
+}
+
 }
 
 
