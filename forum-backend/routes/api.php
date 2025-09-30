@@ -18,7 +18,4 @@ use App\Http\Controllers\FormController;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
-
-Route::post('/forms', [FormController::class, 'store']);   // Save a new form
-Route::get('/forms', [FormController::class, 'index']);    // Get all forms
-Route::get('/forms/{id}', [FormController::class, 'show']);
+Route::post('/forms', [FormController::class, 'store']);
