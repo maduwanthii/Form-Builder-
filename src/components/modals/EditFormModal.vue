@@ -3,28 +3,30 @@ import { ref, watch, defineEmits, defineProps, computed } from 'vue';
 
 const props = defineProps<{
   modelValue: boolean;
-  formData: { title: string; fields: any[] };
+  formData: { title: string; description: string; fields: any[] };
 }>();
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void;
-  (e: 'save', updatedForm: { title: string; fields: any[] }): void;
+  (e: 'save', updatedForm: { title: string; description: string; fields: any[] }): void;
 }>();
 
-// ✅ Proxy v-model
 const isOpen = computed({
   get: () => props.modelValue,
   set: (v: boolean) => emit('update:modelValue', v),
 });
 
-// Local copy of form
-const localForm = ref<{ title: string; fields: any[] }>({ title: '', fields: [] });
+// ✅ Declare before using it
+const localForm = ref<{ title: string; description: string; fields: any[] }>({
+  title: '',
+  description: '',
+  fields: [],
+});
 
-// Sync on open
 watch(
   () => props.formData,
   (val) => {
-    const safe = val || { title: '', fields: [] };
+    const safe = val || { title: '', description: '', fields: [] };
     localForm.value = JSON.parse(JSON.stringify(safe));
   },
   { immediate: true }
@@ -71,7 +73,8 @@ const save = () => {
       <v-card-text>
         <label class="label">Form Title</label>
         <input class="input" v-model="localForm.title" placeholder="Enter form title" />
-
+       <label class="label">Form Description</label>
+<input class="input" v-model="localForm.description" placeholder="Enter form description" />
         <div class="toolbar" style="margin: 10px 0">
           <span class="small">Add Fields:</span>
           <button class="btn" @click="addField('text')">+ Text Input</button>

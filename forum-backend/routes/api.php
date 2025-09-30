@@ -10,3 +10,5 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::post('/forms', [FormController::class, 'store']);
 Route::get('/forms', [FormController::class, 'index']);
 Route::get('/forms/{id}', [FormController::class, 'show']);
+Route::delete('/forms/{id}', [FormController::class, 'destroy']);
+Route::put('/forms/{id}', [FormController::class, 'update']);

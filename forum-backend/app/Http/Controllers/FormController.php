@@ -59,6 +59,30 @@ class FormController extends Controller
     return response()->json(['message' => 'Form deleted successfully'], 200);
 }
 
+public function update(Request $request, $id)
+{
+    $form = Form::find($id);
+
+    if (!$form) {
+        return response()->json(['message' => 'Form not found'], 404);
+    }
+
+    $validated = $request->validate([
+        'name' => 'required|string|max:255',
+        'description' => 'nullable|string',
+        'fields' => 'nullable|array',
+    ]);
+
+    $form->name = $validated['name'];
+    $form->description = $validated['description'] ?? null;
+    $form->fields = $validated['fields'] ?? [];
+
+    $form->save();
+
+    return response()->json(['message' => 'Form updated', 'data' => $form], 200);
+}
+
+
 }
 
 

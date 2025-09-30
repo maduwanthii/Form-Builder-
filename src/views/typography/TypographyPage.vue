@@ -40,6 +40,7 @@ const fetchForms = async () => {
     }
 
     forms.value = apiForms.map((form: any) => ({
+     id: form.id,
       title: form.name,
       description: form.description,
       fields: form.fields || [],
@@ -150,6 +151,45 @@ const saveForm = async () => {
   }
 };
 
+
+const confirmDelete = async (index: number) => {
+  const form = forms.value[index];
+  const formId = form.id;
+  console.log("formId",formId)
+  const result = await Swal.fire({
+    title: 'Are you sure?',
+    text: `Do you really want to delete "${form.title}"? This action cannot be undone.`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Yes, delete it!',
+  });
+
+  if (result.isConfirmed) {
+    try {
+      await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/forms/${formId}`);
+
+      // Remove from local list
+      forms.value.splice(index, 1);
+
+      await Swal.fire({
+        title: 'Deleted!',
+        text: 'Form has been deleted.',
+        icon: 'success',
+      });
+    } catch (error: any) {
+      console.error('Delete error:', error.response?.data || error.message);
+      await Swal.fire({
+        title: 'Failed!',
+        text: 'Could not delete the form. Check console for details.',
+        icon: 'error',
+      });
+    }
+  }
+};
+
+
 const addField = (type: string) => {
   const field = {
     id: genId(),
@@ -191,11 +231,35 @@ const openEdit = (idx: number) => {
   showEditModal.value = true;
 };
 
-const saveEdit = (updated: any) => {
-  if (editIndex.value !== null) {
-    forms.value[editIndex.value] = updated;
+const saveEdit = async (updated: any) => {
+  if (editIndex.value === null) return;
+
+  const id = forms.value[editIndex.value].id;
+
+  try {
+    await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/forms/${id}`, {
+      name: updated.title,
+      description: updated.description,
+      fields: updated.fields,
+    });
+
+    await Swal.fire({
+      icon: 'success',
+      title: 'Form Updated',
+      text: 'Changes have been saved successfully.',
+    });
+
+    await fetchForms();
+  } catch (error: any) {
+    console.error('Update error:', error.response?.data || error.message);
+    await Swal.fire({
+      icon: 'error',
+      title: 'Update Failed',
+      text: 'There was a problem updating the form.',
+    });
   }
 };
+
 
 const showPreviewModal = ref(false);
 const previewFormData = ref<{ title: string; fields: any[] }>({ title: '', fields: [] });
@@ -240,10 +304,16 @@ const openPreview = (idx: number) => {
             {{ previewCount(form) }}
           </v-btn>
 
-          <v-btn variant="tonal" size="small" color="error" class="small-btn">
-            <template #prepend><DeleteOutlined /></template>
-            Delete
-          </v-btn>
+         <v-btn
+  variant="tonal"
+  size="small"
+  color="error"
+  class="small-btn"
+  @click="confirmDelete(i)"
+>
+  <template #prepend><DeleteOutlined /></template>
+  Delete
+</v-btn>
         </div>
       </UiParentCard>
     </v-col>
@@ -318,6 +388,9 @@ const openPreview = (idx: number) => {
   </v-dialog>
 
   <EditFormModal v-model="showEditModal" :formData="editFormData" @save="saveEdit" />
+
+
+
 
   <!-- Preview Modal Component -->
   <PreviewFormModal v-model="showPreviewModal" :formData="previewFormData" />
